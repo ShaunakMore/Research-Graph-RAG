@@ -1,12 +1,12 @@
 from retrieval.hybrid import hybrid_content
-import google.generativeai as genai
+import google.genai as genai
 import ollama
 import json,os
 from dotenv import load_dotenv
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY")) #type:ignore
-model = genai.GenerativeModel("gemini-2.5-flash-lite") #type:ignore
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) 
+model_name = os.getenv("GOOGLE_MODEL")
 
 def ask_hybrid(query):
   
@@ -38,18 +38,19 @@ def ask_hybrid(query):
   
   """
   
-  res = ollama.chat(
-    model = "mistral",
-    messages=[{"role":"user","content":prompt}]
-  )
-  
-  return res["message"]["content"]
-  
-  # res = model.generate_content(
-  #   contents=prompt
+  # res = ollama.chat(
+  #   model = "mistral",
+  #   messages=[{"role":"user","content":prompt}]
   # )
   
-  # try:
-  #   return (res.text)
-  # except:
-  #   return "Gemini request failed"
+  # return res["message"]["content"]
+  
+  res = client.models.generate_content(
+    model="gemma-3-27b-it",
+    contents=prompt
+  )
+  
+  try:
+    return (res.text)
+  except:
+    return "Gemini request failed"

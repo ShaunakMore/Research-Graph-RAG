@@ -9,7 +9,7 @@ pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
 index = pc.Index(INDEX_NAME)
 
-def retrieve_chunks(query, top_k=5):
+def retrieve_chunks(query, top_k=3):
     results = index.search(
         namespace="default",
         query={                   #type:ignore

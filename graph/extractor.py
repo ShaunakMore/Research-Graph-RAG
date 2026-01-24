@@ -1,11 +1,11 @@
-import google.generativeai as genai
+import google.genai as genai
 import ollama
 import json,os
 from dotenv import load_dotenv
 
-# load_dotenv()
-# genai.configure(api_key=os.getenv("GEMINI_API_KEY")) #type:ignore
-# model = genai.GenerativeModel("gemini-2.5-flash-lite") #type:ignore
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) 
+model_name = os.getenv("GOOGLE_MODEL")
 
 SCHEMA = """
 You are a STRICT academic information extractor.
@@ -165,22 +165,20 @@ def extract_entities(text):
       "limitations": [],
       "claims": []
     }
-
-# def extract_entities(text):
   
-#   prompt = f"{SCHEMA}\n\nTEXT:\n{text}"
+  # res = client.models.generate_content(
+  #   model="gemma-3-27b-it",
+  #   contents=prompt
+  # )
   
-#   res = model.generate_content(
-#     contents=prompt
-#   )
-  
-#   try:
-#     return json.loads(res.text)
-#   except:
-#     return{
-#       "methods": [],
-#       "datasets": [],
-#       "metrics": [],
-#       "limitations": [],
-#       "claims": []
-#     }
+  # try:
+  #   return json.loads(res.text)
+  # except Exception as e:
+  #   print(f"Extraction error {e}")
+  #   return{
+  #     "methods": [],
+  #     "datasets": [],
+  #     "metrics": [],
+  #     "limitations": [],
+  #     "claims": []
+  #   }

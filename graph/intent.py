@@ -1,12 +1,11 @@
 import ollama
-import json
-import google.generativeai as genai
+import json,os
+import google.genai as genai
 from dotenv import load_dotenv
 
-# load_dotenv()
-# genai.configure(api_key=os.getenv("GEMINI_API_KEY")) #type:ignore
-# model = genai.GenerativeModel("gemini-2.5-flash-lite") #type:ignore
-
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) 
+model_name = os.getenv("GOOGLE_MODEL")
 
 def detect_intent(query):
 
@@ -23,19 +22,23 @@ def detect_intent(query):
     - entities must be an ARRAY
     - include all relevant subjects (e.g. BERT, GPT, ResNet)
     - if no clear subject exists, return an empty array []
-    - do not include explanations
-    - Strict return VALID JSON ONLY and nothing else ONLY THE JSON
+    - do not include explanations 
+    - DO NOT USE MARKDOWN
     Question: {query}
     """
 
-    res = ollama.chat(
-        model="mistral",
-        messages=[{"role": "user", "content": prompt}]
-    )
+    # res = ollama.chat(
+    #     model="mistral",
+    #     messages=[{"role": "user", "content": prompt}]
+    # )
     
+    res = client.models.generate_content(
+    model="gemma-3-27b-it",
+    contents=prompt
+  )
     try:
-        print(f"\nLLM Detected INTENT: {res["message"]["content"]}\n")
-        return json.loads(res["message"]["content"])
+        print(f"\nLLM Detected INTENT: {res.text}\n")
+        return json.loads(res.text)
     except Exception as e:
         print(e)
         return {"type": "general", "entities": []}
