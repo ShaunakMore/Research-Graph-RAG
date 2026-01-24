@@ -38,18 +38,18 @@ def ask_hybrid(query):
   
   """
   
-  # res = ollama.chat(
-  #   model = "mistral",
-  #   messages=[{"role":"user","content":prompt}]
-  # )
-  
-  # return res["message"]["content"]
-  
-  res = model.generate_content(
-    contents=prompt
+  res = ollama.chat(
+    model = "mistral",
+    messages=[{"role":"user","content":prompt}]
   )
   
-  try:
-    return (res.text)
-  except:
-    return "Gemini request failed"
+  return res["message"]["content"]
+  
+  # res = model.generate_content(
+  #   contents=prompt
+  # )
+  
+  # try:
+  #   return (res.text)
+  # except:
+  #   return "Gemini request failed"
