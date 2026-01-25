@@ -26,7 +26,7 @@ export default function ChatMessages({ messages }) {
             <div
               className={`max-w-2xl ${
                 message.role === 'user'
-                  ? 'bg-libear-to-r from-purple-600 to-pink-600 text-white'
+                  ? 'bg-linear-to-r from-purple-600 to-pink-600 text-white'
                   : 'bg-slate-700/50 text-slate-100 border border-purple-500/10'
               } rounded-2xl px-5 py-4 shadow-lg`}
             >

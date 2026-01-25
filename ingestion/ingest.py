@@ -56,11 +56,11 @@ def should_use_for_graph(section: str) -> bool:
     return True
 
 
-async def ingest(pdf_path: str, pdf_name: str):
+async def ingest(pdf_path: str, pdf_name: str, user_id):
   try:
     text = load_pdf(pdf_path)
     chunks = chunk_text(text, max_words=500)
-    upload_chunks(chunks, paper_id=pdf_name)
+    upload_chunks(chunks, paper_id=pdf_name,user_id=user_id)
 
     curr_budget = 0
     unique_methods = set()
@@ -78,7 +78,7 @@ async def ingest(pdf_path: str, pdf_name: str):
         if(not is_chunk_useful(ents)):
             continue
         
-        add_knowledge(pdf_name.strip(), ents,unique_methods)
+        add_knowledge(paper_id=pdf_name.strip(), entities_json= ents,unique_methods=unique_methods,user_id=user_id)
         print(unique_methods)
         curr_budget+=1
 

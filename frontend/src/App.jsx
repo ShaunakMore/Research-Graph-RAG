@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { SignedIn, SignedOut, UserButton, useUser, useAuth } from '@clerk/clerk-react';
 import Sidebar from './components/Sidebar';
 import ChatMessages from './components/ChatMessages';
 import ChatInput from './components/ChatInput';
 import NamePromptModal from './components/NamePromptModal';
+import AuthScreen from './components/AuthScreen';
 import { sendMessage, uploadPDF, fetchUploadedPapers } from './utils/api';
 import { Sparkles } from 'lucide-react';
 
 export default function App() {
+  const { isLoaded, isSignedIn } = useUser();
+  const { getToken } = useAuth();
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Hello! Upload PDFs to get started, then ask me anything about your documents.' }
   ]);
@@ -17,14 +21,16 @@ export default function App() {
   const [paperName, setPaperName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
-  // Load existing papers on mount
+  // Load existing papers on mount (only when signed in)
   useEffect(() => {
-    const loadPapers = async () => {
-      const papers = await fetchUploadedPapers();
-      setUploadedPapers(papers);
-    };
-    loadPapers();
-  }, []);
+    if (isSignedIn) {
+      const loadPapers = async () => {
+        const papers = await fetchUploadedPapers(getToken);
+        setUploadedPapers(papers);
+      };
+      loadPapers();
+    }
+  }, [isSignedIn, getToken]);
 
   const handleFileSelect = (file) => {
     if (file && file.type === 'application/pdf') {
@@ -40,17 +46,14 @@ export default function App() {
     setIsUploading(true);
     
     try {
-      // Call your backend API
-      const result = await uploadPDF(pendingFile, paperName.trim());
+      const result = await uploadPDF(pendingFile, paperName.trim(), getToken);
       
-      // Add to uploaded papers - use paper_id from backend
       setUploadedPapers([...uploadedPapers, {
         id: result.paper_id,
         name: result.paper_id,
         fileName: result.filename
       }]);
 
-      // Add system message using backend response
       setMessages([...messages, {
         role: 'system',
         content: result.message
@@ -84,8 +87,7 @@ export default function App() {
     setMessages([...messages, { role: 'user', content: userMessage }]);
 
     try {
-      // Call your backend API
-      const response = await sendMessage(userMessage, uploadedPapers);
+      const response = await sendMessage(userMessage, uploadedPapers, getToken);
       
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -100,41 +102,70 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="flex h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900">
-      <Sidebar 
-        uploadedPapers={uploadedPapers}
-        onFileSelect={handleFileSelect}
-      />
-
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="bg-slate-800/50 backdrop-blur-xl border-b border-purple-500/20 p-6">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-purple-400" />
-            Graph RAG Assistant
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Ask questions about your uploaded documents</p>
-        </div>
-
-        <ChatMessages messages={messages} />
-        
-        <ChatInput 
-          inputMessage={inputMessage}
-          setInputMessage={setInputMessage}
-          onSendMessage={handleSendMessage}
-        />
+  // Show loading while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <div className="h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
       </div>
+    );
+  }
 
-      <NamePromptModal
-        show={showNamePrompt}
-        pendingFile={pendingFile}
-        paperName={paperName}
-        setPaperName={setPaperName}
-        onConfirm={handleConfirmUpload}
-        onCancel={handleCancelUpload}
-        isUploading={isUploading}
-      />
-    </div>
+  return (
+    <>
+      <SignedOut>
+        <AuthScreen />
+      </SignedOut>
+      
+      <SignedIn>
+        <div className="flex h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900">
+          <Sidebar 
+            uploadedPapers={uploadedPapers}
+            onFileSelect={handleFileSelect}
+          />
+
+          <div className="flex-1 flex flex-col">
+            {/* Header */}
+            <div className="bg-slate-800/50 backdrop-blur-xl border-b border-purple-500/20 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-6 h-6 text-purple-400" />
+                    Graph RAG Assistant
+                  </h1>
+                  <p className="text-slate-400 text-sm mt-1">Ask questions about your uploaded documents</p>
+                </div>
+                <UserButton 
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-10 h-10"
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <ChatMessages messages={messages} />
+            
+            <ChatInput 
+              inputMessage={inputMessage}
+              setInputMessage={setInputMessage}
+              onSendMessage={handleSendMessage}
+            />
+          </div>
+
+          <NamePromptModal
+            show={showNamePrompt}
+            pendingFile={pendingFile}
+            paperName={paperName}
+            setPaperName={setPaperName}
+            onConfirm={handleConfirmUpload}
+            onCancel={handleCancelUpload}
+            isUploading={isUploading}
+          />
+        </div>
+      </SignedIn>
+    </>
   );
 }

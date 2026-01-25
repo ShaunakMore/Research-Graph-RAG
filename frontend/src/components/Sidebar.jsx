@@ -32,7 +32,7 @@ export default function Sidebar({ uploadedPapers, onFileSelect }) {
               key={paper.id}
               className="bg-slate-700/50 rounded-lg p-3 border border-purple-500/10 hover:border-purple-500/30 transition-colors"
             >
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-6">
                 <FileText className="w-4 h-4 text-purple-400 mt-1 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium text-sm truncate">{paper.name}</p>

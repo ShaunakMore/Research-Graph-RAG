@@ -38,7 +38,7 @@ export default function NamePromptModal({
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="w-16 h-16 text-purple-400 animate-spin mb-4" />
               <p className="text-white text-lg font-medium">Uploading...</p>
-              <p className="text-slate-400 text-sm mt-2">Magic takes time ✨. Please wait while we process your document. This usually takes 5-10 mins.</p>
+              <p className="text-slate-400 text-sm mt-2">Magic takes time ✨. Please wait while we process your document. This usually takes upto 5-10 mins.</p>
             </div>
           ) : (
             <>

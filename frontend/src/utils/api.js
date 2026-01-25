@@ -1,13 +1,24 @@
 // API configuration
-const API_BASE_URL = 'http://localhost:8000'; // Your FastAPI backend
+const API_BASE_URL = 'http://localhost:8000';
 
-export async function uploadPDF(file, paperName) {
+// Helper function to get auth headers
+async function getAuthHeaders(getToken) {
+  const token = await getToken();
+  return {
+    'Authorization': `Bearer ${token}`,
+  };
+}
+
+export async function uploadPDF(file, paperName, getToken) {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('paper_name', paperName); // Changed from 'name' to 'paper_name'
+  formData.append('paper_name', paperName);
+
+  const authHeaders = await getAuthHeaders(getToken);
 
   const response = await fetch(`${API_BASE_URL}/upload`, {
     method: 'POST',
+    headers: authHeaders,
     body: formData,
   });
 
@@ -19,14 +30,17 @@ export async function uploadPDF(file, paperName) {
   return await response.json();
 }
 
-export async function sendMessage(message, uploadedPapers) {
+export async function sendMessage(message, uploadedPapers, getToken) {
+  const authHeaders = await getAuthHeaders(getToken);
+
   const response = await fetch(`${API_BASE_URL}/query`, {
     method: 'POST',
     headers: {
+      ...authHeaders,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      prompt: message, // Your backend expects 'prompt'
+      prompt: message,
     }),
   });
 
@@ -36,14 +50,16 @@ export async function sendMessage(message, uploadedPapers) {
   }
 
   const data = await response.json();
-  return data.message; // Your backend returns { "message": "..." }
+  return data.message;
 }
 
-// Optional: Function to get list of uploaded papers
-export async function fetchUploadedPapers() {
+export async function fetchUploadedPapers(getToken) {
   try {
+    const authHeaders = await getAuthHeaders(getToken);
+
     const response = await fetch(`${API_BASE_URL}/papers`, {
       method: 'GET',
+      headers: authHeaders,
     });
 
     if (!response.ok) {
@@ -52,7 +68,6 @@ export async function fetchUploadedPapers() {
 
     const data = await response.json();
     
-    // Transform backend data to match frontend format
     return data.papers.map(paper => ({
       id: paper.paper_id,
       name: paper.paper_id,
@@ -60,6 +75,6 @@ export async function fetchUploadedPapers() {
     }));
   } catch (error) {
     console.error('Error fetching papers:', error);
-    return []; // Return empty array if fetch fails
+    return [];
   }
 }

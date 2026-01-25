@@ -31,26 +31,23 @@ def prepare_result(results):
     return graph_res
 
 
-def query_graph(intent):
-    print(f"\nRecieved intent: {intent}\n")
+def query_graph(intent, user_id): # Added user_id parameter
+    print(f"\nReceived intent: {intent}\n")
 
     e = intent["entities"]
     t = intent["type"]
     results = []
     if not e:
         return results
-    for ent in e:
-        # ----- STEP 1: Find entity nodes -----
         
-        # print(f"\nChosen Entity: {entity}\n")
-        # print(f"\nChosen question type: {t}\n")
-
+    for ent in e:
+        # ----- STEP 1: Find entity nodes restricted by User ID -----
         paper_query = """
-        MATCH (n)
+        MATCH (n {userId: $uid})
         WHERE toLower(n.name) CONTAINS toLower($e)
             OR toLower($e) CONTAINS toLower(n.name)
 
-        OPTIONAL MATCH (p:Paper)-[]->(n)
+        OPTIONAL MATCH (p:Paper {userId: $uid})-[]->(n)
 
         RETURN DISTINCT
         coalesce(p.name, n.name) as paper
@@ -58,7 +55,8 @@ def query_graph(intent):
         """
 
         with driver.session() as s:
-            paper_res = s.run(paper_query, e=ent).data()
+            # Pass uid to the driver
+            paper_res = s.run(paper_query, e=ent, uid=user_id).data()
 
         if not paper_res:
             continue
@@ -66,116 +64,84 @@ def query_graph(intent):
         paper = paper_res[0]["paper"]
         print(f"\nResolved Paper: {paper}\n")
 
-        # ----- METHOD QUESTION -----
+        # ----- UPDATED QUERIES WITH userId FILTERS -----
+        
+        # Method Question
         if t == "method":
-
             q = """
-            MATCH (p:Paper {name:$paper})
-            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
-
-            RETURN
-            p.name as paper,
-            collect(DISTINCT m.name) as methods
+            MATCH (p:Paper {name: $paper, userId: $uid})
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method {userId: $uid})
+            RETURN p.name as paper, collect(DISTINCT m.name) as methods
             """
 
-        # ----- DATASET QUESTION -----
+        # Dataset Question
         elif t == "dataset":
             q = """
-            MATCH (p:Paper {name: $paper})
-            
-            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
+            MATCH (p:Paper {name: $paper, userId: $uid})
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method {userId: $uid})
             WHERE toLower(m.name) = toLower($e)
-            OPTIONAL MATCH (m)-[:EVALUATED_ON]->(d:Dataset)
+            OPTIONAL MATCH (m)-[:EVALUATED_ON]->(d:Dataset {userId: $uid})
             WITH p, m, collect(DISTINCT d.name) as method_datasets
             
-            OPTIONAL MATCH (p)-[:EVALUATED_ON]->(pd:Dataset)
+            OPTIONAL MATCH (p)-[:EVALUATED_ON]->(pd:Dataset {userId: $uid})
             WITH p, m, method_datasets, collect(DISTINCT pd.name) as paper_datasets
             
-            RETURN 
-                p.name as paper,
-                coalesce(m.name, "") as method,
-                CASE 
-                    WHEN size(method_datasets) > 0 THEN method_datasets
-                    ELSE paper_datasets
-                END as datasets
+            RETURN p.name as paper, coalesce(m.name, "") as method,
+                   CASE WHEN size(method_datasets) > 0 THEN method_datasets ELSE paper_datasets END as datasets
             """
-    # Use 'e=ent' in your s.run() call
 
-        # ----- METRIC QUESTION -----
+        # Metric Question
         elif t == "metric":
             q = """
-            MATCH (p:Paper {name: $paper})
-            
-            // 1. Target specific method first
-            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
+            MATCH (p:Paper {name: $paper, userId: $uid})
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method {userId: $uid})
             WHERE toLower(m.name) = toLower($e)
-            OPTIONAL MATCH (m)-[:MEASURED_BY]->(met:Metric)
+            OPTIONAL MATCH (m)-[:MEASURED_BY]->(met:Metric {userId: $uid})
             WITH p, m, collect(DISTINCT met.name) as method_metrics
             
-            // 2. Paper-level fallback
-            OPTIONAL MATCH (p)-[:MEASURED_BY]->(p_met:Metric)
+            OPTIONAL MATCH (p)-[:MEASURED_BY]->(p_met:Metric {userId: $uid})
             WITH p, m, method_metrics, collect(DISTINCT p_met.name) as paper_metrics
             
-            // 3. Return method results if they exist, otherwise paper results
-            RETURN 
-                p.name as paper,
-                coalesce(m.name, "") as method,
-                CASE 
-                    WHEN size(method_metrics) > 0 THEN method_metrics
-                    ELSE paper_metrics
-                END as metrics
+            RETURN p.name as paper, coalesce(m.name, "") as method,
+                   CASE WHEN size(method_metrics) > 0 THEN method_metrics ELSE paper_metrics END as metrics
             """
 
-        # ----- LIMITATION QUESTION -----
+        # Limitation Question
         elif t == "limitation":
             q = """
-            MATCH (p:Paper {name: $paper})
-            
-            // 1. Target specific method first
-            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
+            MATCH (p:Paper {name: $paper, userId: $uid})
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method {userId: $uid})
             WHERE toLower(m.name) = toLower($e)
-            OPTIONAL MATCH (m)-[:HAS_LIMITATION]->(l:Limitation)
+            OPTIONAL MATCH (m)-[:HAS_LIMITATION]->(l:Limitation {userId: $uid})
             WITH p, m, collect(DISTINCT l.text) as method_limitations
             
-            // 2. Paper-level fallback
-            OPTIONAL MATCH (p)-[:HAS_LIMITATION]->(p_l:Limitation)
+            OPTIONAL MATCH (p)-[:HAS_LIMITATION]->(p_l:Limitation {userId: $uid})
             WITH p, m, method_limitations, collect(DISTINCT p_l.text) as paper_limitations
             
-            RETURN 
-                p.name as paper,
-                coalesce(m.name, "") as method,
-                CASE 
-                    WHEN size(method_limitations) > 0 THEN method_limitations
-                    ELSE paper_limitations
-                END as limitations
+            RETURN p.name as paper, coalesce(m.name, "") as method,
+                   CASE WHEN size(method_limitations) > 0 THEN method_limitations ELSE paper_limitations END as limitations
             """
-        # ----- CLAIM QUESTION -----
+
+        # Claim Question
         elif t in ["claim", "claims"]:
             q = """
-            MATCH (p:Paper {name: $paper})
-            
-            // 1. Target specific method first
-            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
+            MATCH (p:Paper {name: $paper, userId: $uid})
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method {userId: $uid})
             WHERE toLower(m.name) = toLower($e)
-            OPTIONAL MATCH (m)-[:ACHIEVED]->(c:Claim)
+            OPTIONAL MATCH (m)-[:ACHIEVED]->(c:Claim {userId: $uid})
             WITH p, m, collect(DISTINCT c.text) as method_claims
             
-            // 2. Paper-level fallback
-            OPTIONAL MATCH (p)-[:ACHIEVED]->(p_c:Claim)
+            OPTIONAL MATCH (p)-[:ACHIEVED]->(p_c:Claim {userId: $uid})
             WITH p, m, method_claims, collect(DISTINCT p_c.text) as paper_claims
             
-            RETURN 
-                p.name as paper,
-                coalesce(m.name, "") as method,
-                CASE 
-                    WHEN size(method_claims) > 0 THEN method_claims
-                    ELSE paper_claims
-                END as claims
+            RETURN p.name as paper, coalesce(m.name, "") as method,
+                   CASE WHEN size(method_claims) > 0 THEN method_claims ELSE paper_claims END as claims
             """
         else:
             continue
 
         with driver.session() as s:
-            results.append(s.run(q, paper=paper,e=ent).data()) 
+            # Always pass the uid parameter
+            results.append(s.run(q, paper=paper, e=ent, uid=user_id).data()) 
     
     return prepare_result(results)

@@ -9,7 +9,7 @@ pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
 index = pc.Index(INDEX_NAME)
 
-def upload_chunks(chunks, paper_id):
+def upload_chunks(chunks, paper_id, user_id):
   # index.delete(delete_all=True,namespace="default")
   # print("Deleted all vectors in namespace")
   
@@ -23,11 +23,11 @@ def upload_chunks(chunks, paper_id):
         "section": chunk["section"]
       })
     else:
-      index.upsert_records("default",records=vectors)
+      index.upsert_records(namespace=user_id,records=vectors)
       vectors = []
   
   if vectors:
-    index.upsert_records("default",records=vectors)
+    index.upsert_records(namespace=user_id,records=vectors)
   print(f"Uploaded {len(vectors)} chunks for paper ID: {paper_id}")
 
 

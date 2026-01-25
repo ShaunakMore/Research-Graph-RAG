@@ -1,5 +1,6 @@
+@tailwind base;
+@tailwind components;
 @tailwind utilities;
-@import "tailwindcss";
 
 * {
   margin: 0;
@@ -13,8 +14,10 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #0f172a;
 }
 
 #root {
   height: 100vh;
+  background-color: #0f172a;
 }

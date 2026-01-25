@@ -9,11 +9,11 @@ pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
 index = pc.Index(INDEX_NAME)
 
-def retrieve_chunks(query,paper,top_k=3):
+def retrieve_chunks(query,paper,user_id,top_k=3):
     results = []
     if paper:   
         results = index.search(
-            namespace="default",
+            namespace=user_id,
             query={                   #type:ignore
                 "top_k": top_k,
                 "inputs": {
@@ -24,7 +24,7 @@ def retrieve_chunks(query,paper,top_k=3):
             )
     else:
         results = index.search(
-            namespace="default",
+            namespace=user_id,
             query={                   #type:ignore
                 "top_k": top_k,
                 "inputs": {

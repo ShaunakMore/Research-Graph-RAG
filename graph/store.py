@@ -56,33 +56,39 @@ def add_to_graph(s, type: str, name: str, unique_names: set, associated_method: 
     
     
     
-def add_knowledge(paper_id, entities_json, unique_methods):
+def add_knowledge(user_id, paper_id, entities_json, unique_methods):
     """
+    user_id: The unique ID of the user (from Auth)
     paper_id: The Title or DOI of the paper
     entities_json: The list of entities from the LLM
     unique_methods: A set to keep track of proposed methods across the whole paper
     """
+    
     entities = entities_json.get("entities", [])
     if not entities:
         return
 
     with driver.session() as session:
-        # 1. Ensure the Paper node exists
-        session.run("MERGE (p:Paper {name: $n})", n=paper_id)
+        # 1. Ensure the User exists and OWNS this Paper
+        # We include userId in the Paper MERGE to ensure papers with the same title 
+        # but different users remain separate.
+        session.run("""
+            MERGE (u:User {id: $uid})
+            MERGE (p:Paper {name: $pname, userId: $uid})
+            MERGE (u)-[:OWNS]->(p)
+        """, uid=user_id, pname=paper_id)
 
         # 2. FIRST PASS: Create all 'Proposed' Methods
-        # We do this first so other entities have an anchor to attach to.
         for ent in entities:
             if ent.get("type") == "METHOD" and ent.get("status") == "PROPOSED":
                 name = ent.get("name", "Unknown Method").strip()
+                # KEY CHANGE: MERGE on name AND userId so methods aren't shared between users
                 session.run("""
-                    MERGE (m:Method {name: $name})
-                    WITH m
-                    MATCH (p:Paper {name: $paper_id})
-                    WHERE toLower(p.name) = toLower($paper_id)
+                    MATCH (p:Paper {name: $paper_id, userId: $uid})
+                    MERGE (m:Method {name: $name, userId: $uid})
                     MERGE (p)-[:PROPOSES]->(m)
-                """, name=name, paper_id=paper_id)
-                print(f"\nADDED METHOD {name} TO PAPER {paper_id}\n")
+                """, name=name, paper_id=paper_id, uid=user_id)
+                
                 unique_methods.add(name.lower())
 
         # 3. SECOND PASS: Create everything else
@@ -90,43 +96,24 @@ def add_knowledge(paper_id, entities_json, unique_methods):
             e_type = ent.get("type", "").upper()
             target_method = ent.get("associated_method", "").strip()
             
-            # Logic: If the method is known, link to Method. 
-            # Otherwise, link directly to the Paper as a fallback.
             parent_label = "Method" if target_method.lower() in unique_methods else "Paper"
             parent_name = target_method if parent_label == "Method" else paper_id
             
+            # Helper to run the dynamic MERGE
+            # Note: We use f-strings for labels but PARAMS for values to prevent injection
+            def run_upsert(label, rel, prop_name, prop_val):
+                query = f"""
+                    MATCH (parent:{parent_label} {{name: $parent_name, userId: $uid}})
+                    MERGE (child:{label} {{{prop_name}: $val, userId: $uid}})
+                    MERGE (parent)-[:{rel}]->(child)
+                """
+                session.run(query, parent_name=parent_name, val=prop_val, uid=user_id)
+
             if e_type == "DATASET":
-                session.run(f"""
-                    MERGE (d:Dataset {{name: $name}})
-                    WITH d
-                    MATCH (parent:{parent_label} {{name: $parent_name}})
-                    MERGE (parent)-[:EVALUATED_ON]->(d)
-                """, name=ent.get("name"), parent_name=parent_name)
-                print(f"\nADDED DATASET {ent.get("name")} TO NODE {parent_name}\n")
-
+                run_upsert("Dataset", "EVALUATED_ON", "name", ent.get("name"))
             elif e_type == "METRIC":
-                session.run(f"""
-                    MERGE (met:Metric {{name: $name}})
-                    WITH met
-                    MATCH (parent:{parent_label} {{name: $parent_name}})
-                    MERGE (parent)-[:MEASURED_BY]->(met)
-                """, name=ent.get("name"), parent_name=parent_name)
-                print(f"\nADDED METRIC {ent.get("name")} TO NODE {parent_name}\n")
-
+                run_upsert("Metric", "MEASURED_BY", "name", ent.get("name"))
             elif e_type == "CLAIM":
-                session.run(f"""
-                    MERGE (c:Claim {{text: $text}})
-                    WITH c
-                    MATCH (parent:{parent_label} {{name: $parent_name}})
-                    MERGE (parent)-[:ACHIEVED]->(c)
-                """, text=ent.get("statement"), parent_name=parent_name)
-                print(f"\nADDED CLAIM {ent.get("statement")} TO NODE {parent_name}\n")
-
+                run_upsert("Claim", "ACHIEVED", "text", ent.get("statement"))
             elif e_type == "LIMITATION":
-                session.run(f"""
-                    MERGE (l:Limitation {{text: $text}})
-                    WITH l
-                    MATCH (parent:{parent_label} {{name: $parent_name}})
-                    MERGE (parent)-[:HAS_LIMITATION]->(l)
-                """, text=ent.get("description"), parent_name=parent_name)
-                print(f"\nADDED LIMITATION {ent.get("description")} TO NODE {parent_name}\n")
+                run_upsert("Limitation", "HAS_LIMITATION", "text", ent.get("description"))

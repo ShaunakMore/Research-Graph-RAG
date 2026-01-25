@@ -8,9 +8,9 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) 
 model_name = os.getenv("GOOGLE_MODEL")
 
-def ask_hybrid(query,paper_list):
+def ask_hybrid(query,paper_list,user_id):
   
-  vec_chunks, graph_text, _ = hybrid_content(query,paper_list)
+  vec_chunks, graph_text, _ = hybrid_content(query,paper_list,user_id=user_id)
   
   context = "\n\n".join(vec_chunks)
   
