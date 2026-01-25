@@ -2,12 +2,22 @@ from retrieval.vector_retriever import retrieve_chunks as vector_search
 from graph.query import query_graph
 from graph.intent import detect_intent
 
-def hybrid_content(query):
+def hybrid_content(query,paper_list):
   
-  intent = detect_intent(query)
+  intent = detect_intent(query,paper_list)
   
   graph = query_graph(intent)
   
-  vec = vector_search(query)
+  retrieved_vectors = f""
+  if intent["paper_ids"]:
+    for paper in intent["paper_ids"]: 
+      vec = vector_search(query,paper=paper)
+      retrieved_vectors += f"""
+      PAPER: {paper}
+      RETRIEVED CHUNKS:
+      {vec}
+      """
+  else:
+    vec = vector_search(query,paper=None)
   
-  return vec,graph,intent
+  return retrieved_vectors,graph,intent

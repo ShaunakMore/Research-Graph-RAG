@@ -60,7 +60,7 @@ async def ingest(pdf_path: str, pdf_name: str):
   try:
     text = load_pdf(pdf_path)
     chunks = chunk_text(text, max_words=500)
-    #upload_chunks(chunks, paper_id=pdf_name)
+    upload_chunks(chunks, paper_id=pdf_name)
 
     curr_budget = 0
     unique_methods = set()

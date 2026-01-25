@@ -36,7 +36,7 @@ async def handle_query(prompt: Annotated[str | None ,Body(...,embed=True)] = Non
   papers = list(paper_store.iterdir())
   paper_list = [i.name for i in papers]
   
-  llm_response = ask_hybrid(prompt)
+  llm_response = ask_hybrid(prompt,paper_list)
   if(llm_response == "Gemini request failed"):
     return {
       "message":"Error connecting with Gemini"

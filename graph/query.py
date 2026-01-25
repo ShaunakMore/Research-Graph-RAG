@@ -81,74 +81,96 @@ def query_graph(intent):
         # ----- DATASET QUESTION -----
         elif t == "dataset":
             q = """
-            MATCH (p:Paper {name:$paper})
+            MATCH (p:Paper {name: $paper})
             
             OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
-            WHERE toLower(m.name) CONTAINS toLower($e)
-            
+            WHERE toLower(m.name) = toLower($e)
             OPTIONAL MATCH (m)-[:EVALUATED_ON]->(d:Dataset)
+            WITH p, m, collect(DISTINCT d.name) as method_datasets
             
-            OPTIONAL MATCH (p)-[:EVALUATED_ON]->(d2:Dataset)
-            WHERE m IS NULL
+            OPTIONAL MATCH (p)-[:EVALUATED_ON]->(pd:Dataset)
+            WITH p, m, method_datasets, collect(DISTINCT pd.name) as paper_datasets
             
             RETURN 
-                p.name as paper, 
-                coalesce(m.name, "") as method, 
-                collect(DISTINCT d.name) + collect(DISTINCT d2.name) as datasets
+                p.name as paper,
+                coalesce(m.name, "") as method,
+                CASE 
+                    WHEN size(method_datasets) > 0 THEN method_datasets
+                    ELSE paper_datasets
+                END as datasets
             """
     # Use 'e=ent' in your s.run() call
 
         # ----- METRIC QUESTION -----
         elif t == "metric":
             q = """
-            MATCH (p:Paper {name:$paper})
+            MATCH (p:Paper {name: $paper})
+            
+            // 1. Target specific method first
             OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
-            WHERE toLower(m.name) CONTAINS toLower($e)
-            
+            WHERE toLower(m.name) = toLower($e)
             OPTIONAL MATCH (m)-[:MEASURED_BY]->(met:Metric)
+            WITH p, m, collect(DISTINCT met.name) as method_metrics
             
-            OPTIONAL MATCH (p)-[:MEASURED_BY]->(met2:Metric)
-            WHERE m IS NULL
+            // 2. Paper-level fallback
+            OPTIONAL MATCH (p)-[:MEASURED_BY]->(p_met:Metric)
+            WITH p, m, method_metrics, collect(DISTINCT p_met.name) as paper_metrics
             
+            // 3. Return method results if they exist, otherwise paper results
             RETURN 
-                p.name as paper, 
-                coalesce(m.name, "") as method, 
-                collect(DISTINCT met.name) + collect(DISTINCT met2.name) as metrics
+                p.name as paper,
+                coalesce(m.name, "") as method,
+                CASE 
+                    WHEN size(method_metrics) > 0 THEN method_metrics
+                    ELSE paper_metrics
+                END as metrics
             """
 
         # ----- LIMITATION QUESTION -----
         elif t == "limitation":
             q = """
-            MATCH (p:Paper {name:$paper})
+            MATCH (p:Paper {name: $paper})
+            
+            // 1. Target specific method first
             OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
-            WHERE toLower(m.name) CONTAINS toLower($e)
-            
+            WHERE toLower(m.name) = toLower($e)
             OPTIONAL MATCH (m)-[:HAS_LIMITATION]->(l:Limitation)
+            WITH p, m, collect(DISTINCT l.text) as method_limitations
             
-            OPTIONAL MATCH (p)-[:HAS_LIMITATION]->(l2:Limitation)
-            WHERE m IS NULL
+            // 2. Paper-level fallback
+            OPTIONAL MATCH (p)-[:HAS_LIMITATION]->(p_l:Limitation)
+            WITH p, m, method_limitations, collect(DISTINCT p_l.text) as paper_limitations
             
             RETURN 
-                p.name as paper, 
-                coalesce(m.name, "") as method, 
-                collect(DISTINCT l.text) + collect(DISTINCT l2.text) as limitations
+                p.name as paper,
+                coalesce(m.name, "") as method,
+                CASE 
+                    WHEN size(method_limitations) > 0 THEN method_limitations
+                    ELSE paper_limitations
+                END as limitations
             """
         # ----- CLAIM QUESTION -----
         elif t in ["claim", "claims"]:
             q = """
-            MATCH (p:Paper {name:$paper})
+            MATCH (p:Paper {name: $paper})
+            
+            // 1. Target specific method first
             OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
-            WHERE toLower(m.name) CONTAINS toLower($e)
-            
+            WHERE toLower(m.name) = toLower($e)
             OPTIONAL MATCH (m)-[:ACHIEVED]->(c:Claim)
+            WITH p, m, collect(DISTINCT c.text) as method_claims
             
-            OPTIONAL MATCH (p)-[:ACHIEVED]->(c2:Claim)
-            WHERE m IS NULL
+            // 2. Paper-level fallback
+            OPTIONAL MATCH (p)-[:ACHIEVED]->(p_c:Claim)
+            WITH p, m, method_claims, collect(DISTINCT p_c.text) as paper_claims
             
             RETURN 
-                p.name as paper, 
-                coalesce(m.name, "") as method, 
-                collect(DISTINCT c.text) + collect(DISTINCT c2.text) as claims
+                p.name as paper,
+                coalesce(m.name, "") as method,
+                CASE 
+                    WHEN size(method_claims) > 0 THEN method_claims
+                    ELSE paper_claims
+                END as claims
             """
         else:
             continue

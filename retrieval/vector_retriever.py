@@ -9,16 +9,29 @@ pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
 index = pc.Index(INDEX_NAME)
 
-def retrieve_chunks(query, top_k=3):
-    results = index.search(
-        namespace="default",
-        query={                   #type:ignore
-            "top_k": top_k,
-            "inputs": {
-                'text': query
+def retrieve_chunks(query,paper,top_k=3):
+    results = []
+    if paper:   
+        results = index.search(
+            namespace="default",
+            query={                   #type:ignore
+                "top_k": top_k,
+                "inputs": {
+                    'text': query
+                },
+                "filter": {"paper":{"$eq": f"{paper}"}}  
             }
-        }
-        )
+            )
+    else:
+        results = index.search(
+            namespace="default",
+            query={                   #type:ignore
+                "top_k": top_k,
+                "inputs": {
+                    'text': query
+                } 
+            }
+            )
       
     print(f"\nRetrieved {len(results["result"]['hits'])} chunks\n")
     return [f"[CTX_{i+1}]{match["fields"]["text"]}" for i,match in enumerate(results["result"]['hits'])]
