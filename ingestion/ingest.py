@@ -40,9 +40,7 @@ BLACKLIST_SECTIONS = {
 GRAPH_BUDGET = 30
 
 def is_chunk_useful(result):
-    return any(
-        result.get(k) for k in ["methods", "datasets", "metrics", "limitations", "claims"]
-    )
+    return result.get("entities")
     
 def should_use_for_graph(section: str) -> bool:
     if not section:
@@ -62,9 +60,10 @@ async def ingest(pdf_path: str, pdf_name: str):
   try:
     text = load_pdf(pdf_path)
     chunks = chunk_text(text, max_words=500)
-    upload_chunks(chunks, paper_id=pdf_name)
+    #upload_chunks(chunks, paper_id=pdf_name)
 
     curr_budget = 0
+    unique_methods = set()
     for c in chunks:
         if(curr_budget >= GRAPH_BUDGET):
             break
@@ -74,13 +73,13 @@ async def ingest(pdf_path: str, pdf_name: str):
         if not should_use_for_graph(section):
             continue
 
-        ents = extract_entities(c["text"])
+        ents = extract_entities(paper_name=pdf_name,section=section,text=c["text"])
         
         if(not is_chunk_useful(ents)):
             continue
         
-        print("ENTITIES:", ents)
-        add_knowledge(pdf_name, ents)
+        add_knowledge(pdf_name.strip(), ents,unique_methods)
+        print(unique_methods)
         curr_budget+=1
 
     print(f"[INGEST] Graph populated and vector db updated successfully for {pdf_name}")

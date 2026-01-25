@@ -32,6 +32,10 @@ async def handle_query(prompt: Annotated[str | None ,Body(...,embed=True)] = Non
     raise HTTPException(status_code=400,detail="Prompt cannot be empty")
 
   # llm_response = ask_hybrid(query=prompt)
+  paper_store = UPLOAD_DIR
+  papers = list(paper_store.iterdir())
+  paper_list = [i.name for i in papers]
+  
   llm_response = ask_hybrid(prompt)
   if(llm_response == "Gemini request failed"):
     return {
@@ -85,9 +89,11 @@ async def upload_paper(file: UploadFile = File(...), paper_name: str = Form(...)
     paper_dir.mkdir(exist_ok=False)
 
     pdf_path = paper_dir / file.filename
+        
     with pdf_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    result_ingest = await ingest(pdf_path,paper_id)
     
     # 5️⃣ Register paper
     PAPER_REGISTRY[paper_id] = {
@@ -96,8 +102,6 @@ async def upload_paper(file: UploadFile = File(...), paper_name: str = Form(...)
         "path": str(pdf_path),
     }
     
-    result_ingest = await ingest(pdf_path,paper_id)
-
     print(result_ingest)
     
     return {

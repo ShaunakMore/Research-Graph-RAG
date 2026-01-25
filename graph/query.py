@@ -10,23 +10,24 @@ driver = GraphDatabase.driver(
 
 def prepare_result(results):
     graph_res = ""
-
-    for i,rows in enumerate(results):
+    for i, rows in enumerate(results):
         for res in rows:
             paper = res.get("paper", "UNKNOWN")
+            method = res.get("method", "")
+            
+            # This ensures we don't say "METHOD: " if we fell back to Paper-level data
+            method_line = f"METHOD: {method}\n" if method else ""
 
             for key, value in res.items():
-                if key == "paper":
-                    continue
+                if key in ["paper", "method"]: continue
 
-                joined = ", ".join(value) if value else "None"
+                # If the CASE statement returned an empty list for both, show "None Found"
+                if isinstance(value, list):
+                    joined = ", ".join(value) if value else "None Found"
+                else:
+                    joined = str(value) if value else "None Found"
 
-                graph_res += f"""
-                [GRAPH_{i+1}]PAPER: {paper}
-                {key.upper()}: {joined}
-
-                """
-
+                graph_res += f"[GRAPH_{i+1}]\nPAPER: {paper}\n{method_line}{key.upper()}: {joined}\n\n"
     return graph_res
 
 
@@ -79,44 +80,80 @@ def query_graph(intent):
 
         # ----- DATASET QUESTION -----
         elif t == "dataset":
-
             q = """
             MATCH (p:Paper {name:$paper})
-            OPTIONAL MATCH (p)-[:USES]->(d:Dataset)
-
-            RETURN
-            p.name as paper,
-            collect(DISTINCT d.name) as datasets
+            
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
+            WHERE toLower(m.name) CONTAINS toLower($e)
+            
+            OPTIONAL MATCH (m)-[:EVALUATED_ON]->(d:Dataset)
+            
+            OPTIONAL MATCH (p)-[:EVALUATED_ON]->(d2:Dataset)
+            WHERE m IS NULL
+            
+            RETURN 
+                p.name as paper, 
+                coalesce(m.name, "") as method, 
+                collect(DISTINCT d.name) + collect(DISTINCT d2.name) as datasets
             """
+    # Use 'e=ent' in your s.run() call
 
         # ----- METRIC QUESTION -----
         elif t == "metric":
-
             q = """
             MATCH (p:Paper {name:$paper})
-            OPTIONAL MATCH (p)-[:REPORTS]->(me:Metric)
-
-            RETURN
-            p.name as paper,
-            collect(DISTINCT me.name) as metrics
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
+            WHERE toLower(m.name) CONTAINS toLower($e)
+            
+            OPTIONAL MATCH (m)-[:MEASURED_BY]->(met:Metric)
+            
+            OPTIONAL MATCH (p)-[:MEASURED_BY]->(met2:Metric)
+            WHERE m IS NULL
+            
+            RETURN 
+                p.name as paper, 
+                coalesce(m.name, "") as method, 
+                collect(DISTINCT met.name) + collect(DISTINCT met2.name) as metrics
             """
 
         # ----- LIMITATION QUESTION -----
         elif t == "limitation":
-
             q = """
             MATCH (p:Paper {name:$paper})
-            OPTIONAL MATCH (p)-[:HAS_LIMITATION]->(l:Limitation)
-
-            RETURN
-            p.name as paper,
-            collect(DISTINCT l.text) as limitations
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
+            WHERE toLower(m.name) CONTAINS toLower($e)
+            
+            OPTIONAL MATCH (m)-[:HAS_LIMITATION]->(l:Limitation)
+            
+            OPTIONAL MATCH (p)-[:HAS_LIMITATION]->(l2:Limitation)
+            WHERE m IS NULL
+            
+            RETURN 
+                p.name as paper, 
+                coalesce(m.name, "") as method, 
+                collect(DISTINCT l.text) + collect(DISTINCT l2.text) as limitations
             """
-
+        # ----- CLAIM QUESTION -----
+        elif t in ["claim", "claims"]:
+            q = """
+            MATCH (p:Paper {name:$paper})
+            OPTIONAL MATCH (p)-[:PROPOSES]->(m:Method)
+            WHERE toLower(m.name) CONTAINS toLower($e)
+            
+            OPTIONAL MATCH (m)-[:ACHIEVED]->(c:Claim)
+            
+            OPTIONAL MATCH (p)-[:ACHIEVED]->(c2:Claim)
+            WHERE m IS NULL
+            
+            RETURN 
+                p.name as paper, 
+                coalesce(m.name, "") as method, 
+                collect(DISTINCT c.text) + collect(DISTINCT c2.text) as claims
+            """
         else:
             continue
 
         with driver.session() as s:
-            results.append(s.run(q, paper=paper).data()) 
+            results.append(s.run(q, paper=paper,e=ent).data()) 
     
     return prepare_result(results)
