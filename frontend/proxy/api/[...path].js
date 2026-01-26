@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const HF_BASE = "https://YOUR_SPACE.hf.space";
+    const HF_BASE = "https://strawhat0304-Research-Graph-RAG-app.hf.space";
     
     // Safety check for path
     const path = req.query.path ? (Array.isArray(req.query.path) ? req.query.path.join("/") : req.query.path) : "";
