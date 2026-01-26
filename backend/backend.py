@@ -108,7 +108,7 @@ async def upload_to_hf(content: bytes, user_id: str, paper_id: str):
     Uploads bytes directly to the HF Dataset bucket.
     Automatically creates user folders via the path_in_repo.
     """
-    # Define the path where the file will sit in the repo
+    # Define the path 
     path_in_repo = f"{user_id}/{paper_id}.pdf"
     
     # Upload directly from memory (no local disk needed)
@@ -209,8 +209,6 @@ async def upload_paper(
 
     # 7️⃣ Process the document
     result_ingest = await ingest(pdf_stream, paper_id,user_id=user_id)
-
-    print(result_ingest)
 
     return {
         "status": "success",

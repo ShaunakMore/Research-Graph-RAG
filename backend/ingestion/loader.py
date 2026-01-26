@@ -10,5 +10,3 @@ def load_pdf(pdf_stream):
       text+=page.extract_text()
     
   return text.strip()
-  
-text = load_pdf("./data/bert.pdf")

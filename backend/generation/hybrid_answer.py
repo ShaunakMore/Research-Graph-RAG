@@ -1,7 +1,6 @@
 from retrieval.hybrid import hybrid_content
 import google.genai as genai
-import ollama
-import json,os
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,13 +36,6 @@ def ask_hybrid(query,paper_list,user_id):
   {query}
   
   """
-  
-  # res = ollama.chat(
-  #   model = "mistral",
-  #   messages=[{"role":"user","content":prompt}]
-  # )
-  
-  # return res["message"]["content"]
   
   res = client.models.generate_content(
     model="gemma-3-27b-it",

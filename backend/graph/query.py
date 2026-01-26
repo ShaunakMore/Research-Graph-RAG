@@ -62,7 +62,6 @@ def query_graph(intent, user_id): # Added user_id parameter
             continue
 
         paper = paper_res[0]["paper"]
-        print(f"\nResolved Paper: {paper}\n")
 
         # ----- UPDATED QUERIES WITH userId FILTERS -----
         

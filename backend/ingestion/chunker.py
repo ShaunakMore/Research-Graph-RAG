@@ -54,5 +54,4 @@ def chunk_text(text,max_words = 300):
           "text": "\n\n".join(current)
         })
   
-  print(f"No. of chunks {len(all_chunks)}")
   return all_chunks

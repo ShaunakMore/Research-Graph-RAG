@@ -1,4 +1,3 @@
-import ollama
 import json,os,re
 import google.genai as genai
 from dotenv import load_dotenv
@@ -23,36 +22,10 @@ def parse_llm_json(raw_output):
     try:
         return json.loads(clean_json)
     except json.JSONDecodeError as e:
-        print(f"Failed to parse JSON: {e}")
         # Log the raw output for debugging
         return  {"type": "general", "paper_ids": [] ,"entities": []}
 
 def detect_intent(query,paper_list):
-
-    # prompt = f"""
-    # Classify the research question.
-
-    # Return JSON ONLY in this format:
-
-    # {{
-    #   "type": "one of: method | dataset | metric | limitation | claims | general",
-    #   "entities": ["list of main subjects explicitly mentioned in the question"]}}
-
-    # Rules:
-    # - entities must be an ARRAY
-    # - include all relevant subjects (e.g. BERT, GPT, ResNet)
-    # - if no clear subject exists, return an empty array []
-    # - do not include explanations 
-    # - DO NOT USE MARKDOWN FORMAT like ```json ```
-    # Question: {query}
-    
-    # - DO NOT USE MARKDOWN FORMAT
-    # """
-
-    # res = ollama.chat(
-    #     model="mistral",
-    #     messages=[{"role": "user", "content": prompt}]
-    # )
     
     prompt = f"""
     You are an intent classifier for a Research Assistant.
@@ -79,8 +52,6 @@ def detect_intent(query,paper_list):
     contents=prompt
   )
     try:
-        print(f"\nLLM Detected INTENT: {res.text}\n")
         return parse_llm_json(res.text)
     except Exception as e:
-        print(e)
         return {"type": "general", "paper_ids": [] ,"entities": []}

@@ -5,22 +5,6 @@ from retrieval.vector_retriever import retrieve_chunks as vector_search
 from graph.extractor import extract_entities
 from graph.store import add_knowledge
 
-# async def ingest(pdf_path,pdf_name):
-#   try:
-#     text = load_pdf(pdf_path)
-#     chunks = chunk_text(text, max_words=300)
-#     upload_chunks(chunks, paper_id=pdf_name)
-#     chunks = vector_search(pdf_name,top_k=20)
-
-#     for c in chunks:
-#       ents  = extract_entities(c)
-#       print("ENTITIES:", ents)
-#       add_knowledge(pdf_name,ents)
-
-#     print("Graph populated successfully.")
-#     return f"Pdf uploaded to both graph and vector db"
-#   except Exception as e:
-#     return f"Error: {e}"
   
 BLACKLIST_SECTIONS = {
     "related work",
@@ -79,10 +63,8 @@ async def ingest(pdf_stream, pdf_name: str, user_id):
             continue
         
         add_knowledge(paper_id=pdf_name.strip(), entities_json= ents,unique_methods=unique_methods,user_id=user_id)
-        print(unique_methods)
         curr_budget+=1
 
-    print(f"[INGEST] Graph populated and vector db updated successfully for {pdf_name}")
   
   except Exception as e:
     return f"Error: {e}"
