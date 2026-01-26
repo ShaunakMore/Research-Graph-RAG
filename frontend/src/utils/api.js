@@ -1,5 +1,5 @@
 // API configuration
-const API_BASE_URL = 'https://research-graph-rag-proxy.vercel.app/';
+const API_BASE_URL = 'https://research-graph-rag-proxy.vercel.app';
 
 // Helper function to get auth headers
 async function getAuthHeaders(getToken) {
