@@ -1,12 +1,16 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 export default async function handler(req, res) {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "https://research-graph-rag.vercel.app");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Handle preflight
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   try {
-    const HF_BASE = "https://strawhat0304-Research-Graph-RAG-app.hf.space";
+    const HF_BASE = "https://YOUR_SPACE.hf.space";
 
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -19,7 +23,6 @@ export default async function handler(req, res) {
       Authorization: `Bearer ${process.env.HF_TOKEN}`,
     };
 
-    // Preserve content type if present
     if (req.headers["content-type"]) {
       headers["Content-Type"] = req.headers["content-type"];
     }
@@ -31,14 +34,11 @@ export default async function handler(req, res) {
       duplex: "half",
     });
 
-    const arrayBuffer = await hfRes.arrayBuffer();
+    const buffer = await hfRes.arrayBuffer();
 
     res.status(hfRes.status);
-    res.setHeader(
-      "Content-Type",
-      hfRes.headers.get("content-type") || "application/json"
-    );
-    res.send(Buffer.from(arrayBuffer));
+    res.setHeader("Content-Type", hfRes.headers.get("content-type") || "application/json");
+    res.send(Buffer.from(buffer));
 
   } catch (err) {
     console.error("Proxy error:", err);
