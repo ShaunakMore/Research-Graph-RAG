@@ -1,7 +1,7 @@
 import pypdf as pdf
 
-def load_pdf(pdf_path):
-  pdf_reader = pdf.PdfReader(pdf_path)
+def load_pdf(pdf_stream):
+  pdf_reader = pdf.PdfReader(pdf_stream)
   text = ""
   
   for i,page in enumerate(pdf_reader.pages):

@@ -1,0 +1,11 @@
+fastapi
+python-multipart
+uvicorn
+requests
+python-jose[cryptography]
+python-dotenv
+huggingface-hub
+pinecone-client
+pypdf
+neo4j
+google-genai

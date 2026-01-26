@@ -56,9 +56,9 @@ def should_use_for_graph(section: str) -> bool:
     return True
 
 
-async def ingest(pdf_path: str, pdf_name: str, user_id):
+async def ingest(pdf_stream, pdf_name: str, user_id):
   try:
-    text = load_pdf(pdf_path)
+    text = load_pdf(pdf_stream)
     chunks = chunk_text(text, max_words=500)
     upload_chunks(chunks, paper_id=pdf_name,user_id=user_id)
 
