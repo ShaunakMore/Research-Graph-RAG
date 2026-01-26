@@ -5,13 +5,21 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  // ✅ ALWAYS set CORS headers first
-  res.setHeader("Access-Control-Allow-Origin", "https://research-graph-rag.vercel.app");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
+  // 🔒 CORS — MUST be first
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://research-graph-rag.vercel.app"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,DELETE,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
 
-  // ✅ Handle preflight request
+  // ✅ Handle preflight
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -44,11 +52,14 @@ export default async function handler(req, res) {
     const buffer = await hfRes.arrayBuffer();
 
     res.status(hfRes.status);
-    res.setHeader("Content-Type", hfRes.headers.get("content-type") || "application/json");
-    return res.send(Buffer.from(buffer));
+    res.setHeader(
+      "Content-Type",
+      hfRes.headers.get("content-type") || "application/json"
+    );
+    res.send(Buffer.from(buffer));
 
   } catch (err) {
     console.error("Proxy error:", err);
-    return res.status(500).json({ detail: "Proxy error", error: String(err) });
+    res.status(500).json({ detail: "Proxy error", error: String(err) });
   }
 }
