@@ -1,10 +1,17 @@
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export default async function handler(req, res) {
-  // CORS headers
+  // ✅ ALWAYS set CORS headers first
   res.setHeader("Access-Control-Allow-Origin", "https://research-graph-rag.vercel.app");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
 
-  // Handle preflight
+  // ✅ Handle preflight request
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -38,10 +45,10 @@ export default async function handler(req, res) {
 
     res.status(hfRes.status);
     res.setHeader("Content-Type", hfRes.headers.get("content-type") || "application/json");
-    res.send(Buffer.from(buffer));
+    return res.send(Buffer.from(buffer));
 
   } catch (err) {
     console.error("Proxy error:", err);
-    res.status(500).json({ detail: "Proxy error", error: String(err) });
+    return res.status(500).json({ detail: "Proxy error", error: String(err) });
   }
 }
