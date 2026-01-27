@@ -1,5 +1,5 @@
 // API configuration
-const API_BASE_URL = 'https://strawhat0304-Research-Graph-RAG-app.hf.space/';
+const API_BASE_URL = 'https://strawhat0304-Research-Graph-RAG-app.hf.space';
 
 // Helper function to get auth headers
 async function getAuthHeaders(getToken) {
