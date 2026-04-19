@@ -121,7 +121,7 @@ def extract_entities(section, paper_name, text):
   
   
   res = client.models.generate_content(
-    model="gemma-3-27b-it",
+    model=model_name,
     contents=prompt
   )
   
