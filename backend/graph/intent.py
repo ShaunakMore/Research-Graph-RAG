@@ -48,7 +48,7 @@ def detect_intent(query,paper_list):
     Question: {query}
     """
     res = client.models.generate_content(
-    model="gemma-3-27b-it",
+    model=model_name,
     contents=prompt
   )
     try:
