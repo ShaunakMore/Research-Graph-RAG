@@ -38,7 +38,7 @@ def ask_hybrid(query,paper_list,user_id):
   """
   
   res = client.models.generate_content(
-    model="gemma-3-27b-it",
+    model=model_name,
     contents=prompt
   )
   
